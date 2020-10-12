@@ -1,5 +1,5 @@
 # covidgovhu
-## An unofficial covidgovhu
+## An unofficial covidgovhu API.
 
 # How to use
 Send a GET request to the root domain:
