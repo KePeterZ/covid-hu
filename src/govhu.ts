@@ -58,7 +58,7 @@ export const getNumberChanges = async (pagesToScan: number) => {
 
 export const mainAPI = async () => {
   let newsPage1 = getNews()
-  let newsPage2 = getNews(1)
+  let newsPage2 = getNews(2)
   let numbers = getNumbers()
   let numberChanges = getNumberChanges(2)
   return { 
