@@ -1,19 +1,20 @@
 import axios from "axios"
-import e from "express"
 import { JSDOM } from "jsdom"
 
-export const getNews = async () => {
-  let dom = new JSDOM(await (await axios.get("https://koronavirus.gov.hu/hirek")).data)
+export const max = (num: number, max: number) => num>max ? max : num
+
+export const getNews = async (pageNumber=1) => {
+  let dom = new JSDOM(await (await axios.get(`https://koronavirus.gov.hu/hirek?page=${pageNumber}`)).data)
   let newsArray = Array.from(dom.window.document.querySelectorAll("div.article-teaser"))
   let news = newsArray.map(e => {
     return { 
-      title: e.querySelector("h3")?.textContent,
-      date: e.querySelector("i")?.textContent,
+      title: e.querySelector("h3")?.textContent as string,
+      date: e.querySelector("i")?.textContent as string,
       teaser: Array.from(e.querySelectorAll("p")).sort((a, b) => {
         return (b.textContent?.length as number) - (a.textContent?.length as number)
-      })[0].textContent,
-      img: e.querySelector("img")?.src,
-      link: "https://koronavirus.gov.hu" + e.querySelector("a")?.href
+      })[0].textContent as string,
+      img: e.querySelector("img")?.src as string,
+      link: "https://koronavirus.gov.hu" + e.querySelector("a")?.href as string
     }
   })
   return news
@@ -31,11 +32,38 @@ export const getNumbers = async () => {
   return apiObject
 }
 
+export const getPages = async (pageAmount: number) => {
+  let pages = []
+  for(let pageNumber=0; pageNumber<pageAmount; pageNumber++) {
+    pages.push(getNews(pageNumber))
+  }
+  pages = await Promise.all(pages)
+  let allPages = pages.reduce((obj, elem) => obj.concat(elem))
+  return allPages as Array<typeof allPages[0]>
+}
+
+export const getNumberChanges = async (pagesToScan: number) => {
+  let pagesScanned = await getPages(pagesToScan)
+  let articles = pagesScanned.filter((elem) => elem.link.includes("fovel-emelkedett"))
+  let changesWithDates = articles.map(e => {
+    let numbersFromChange: number[] = e.title.match(/\d+/g)?.map(Number) ?? []
+    return {
+      infected: numbersFromChange[0],
+      deaths: numbersFromChange[1],
+      date: e.date.split(" ").slice(0,3).join(" ")
+    }
+  })
+  return changesWithDates
+}
+
 export const mainAPI = async () => {
-  let news = getNews()
+  let newsPage1 = getNews()
+  let newsPage2 = getNews(1)
   let numbers = getNumbers()
+  let numberChanges = getNumberChanges(2)
   return { 
-    news: await news,
-    numbers: await numbers
+    news: (await newsPage1).concat(await newsPage2),
+    numbers: await numbers,
+    latestNumbers: (await numberChanges)[0]
   }
 }
